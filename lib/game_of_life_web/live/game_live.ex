@@ -4,7 +4,7 @@ defmodule GameOfLifeWeb.GameLive do
   alias GameOfLife.Game
 
   # Default grid size
-  @grid_size 30
+  @grid_size 100
   # Default speed in ms
   @default_speed 200
 
@@ -79,8 +79,8 @@ defmodule GameOfLifeWeb.GameLive do
 
   @impl true
   def handle_info(:tick, %{assigns: %{is_running: true, speed: speed}} = socket) do
-      Process.send_after(self(), :tick, speed)
-      {:noreply, tick_game(socket)}
+    Process.send_after(self(), :tick, speed)
+    {:noreply, tick_game(socket)}
   end
 
   def handle_info(:tick, socket) do
