@@ -1,0 +1,62 @@
+<!-- This file will contain the HEEx template for the Game of Life LiveView. -->
+<!-- It will render the grid and control buttons. -->
+<div>
+  <h1 class="text-2xl font-bold mb-4">Conway's Game of Life</h1>
+
+  <!-- Grid will be rendered here -->
+  <div class="grid-container" 
+       style={{"grid-template-columns": "repeat(" <> Integer.to_string(@grid_size) <> ", 1fr)",
+               "width": "calc(" <> Integer.to_string(@grid_size * 20) <> "px)",
+               "height": "calc(" <> Integer.to_string(@grid_size * 20) <> "px)",
+               "border": "1px solid #ccc"}}>
+    <%= for y <- 0..(@grid_size - 1) do %>
+      <%= for x <- 0..(@grid_size - 1) do %>
+        <div class={if {x,y} in @live_cells, do: "cell alive", else: "cell dead"}
+             phx-click="toggle_cell" 
+             phx-value-x={x} 
+             phx-value-y={y}
+             style="border: 1px solid #eee; aspect-ratio: 1/1;">
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Controls will be rendered here -->
+  <div class="controls mt-4 space-x-2">
+    <button phx-click="start_stop" class="px-4 py-2 bg-blue-500 text-white rounded">
+      <%= if @is_running, do: "Pause", else: "Start" %>
+    </button>
+    <button phx-click="next_step" :if={!@is_running} class="px-4 py-2 bg-green-500 text-white rounded">
+      Next Step
+    </button>
+    <button phx-click="clear" class="px-4 py-2 bg-red-500 text-white rounded">
+      Clear
+    </button>
+  </div>
+
+  <div class="mt-4">
+    <label for="speed">Speed: <%= @speed %> ms</label>
+    <input type="range" id="speed" min="50" max="1000" step="50" value={@speed} 
+           phx-change="set_speed" 
+           phx-debounce="200"
+           class="w-full"/>
+  </div>
+
+  <p class="mt-2">Generation: <%= @generation %></p>
+  <p class="mt-2 text-sm text-gray-600">Click on a cell to toggle its state.</p>
+
+</div>
+
+<style>
+  .cell.alive {
+    background-color: black;
+  }
+  .grid-container {
+    display: grid;
+    border: 1px solid #ccc;
+  }
+  .cell {
+    border: 1px solid #eee;
+    aspect-ratio: 1 / 1;
+  }
+</style>
