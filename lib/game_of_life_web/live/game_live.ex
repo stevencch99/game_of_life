@@ -17,8 +17,8 @@ defmodule GameOfLifeWeb.GameLive do
         is_running: false,
         speed: @default_speed,
         generation: 0,
-        # Assign pre-calculated grid_style
-        grid_style: grid_style_value(@grid_size)
+        grid_style: grid_style_value(@grid_size),
+        timer: nil
       )
 
     {:ok, socket}
@@ -39,48 +39,72 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   def handle_event("start_stop", _, socket) do
-    is_running = socket.assigns.is_running
-    new_socket = assign(socket, :is_running, !is_running)
+    %{is_running: is_running, timer: timer, speed: speed} = socket.assigns
 
-    if !is_running do
-      # Start the game
-      Process.send_after(self(), :tick, new_socket.assigns.speed)
-      # Evolve one step immediately when starting
-      {:noreply, tick_game(new_socket)}
-    else
-      # Pause the game - the :tick handler will stop sending messages
-      {:noreply, new_socket}
-    end
+    new_socket =
+      if is_running do
+        # Stop the game and cancel the timer
+        if timer, do: Process.cancel_timer(timer)
+        assign(socket, is_running: false, timer: nil)
+      else
+        # Start the game and schedule the first tick
+        socket
+        |> assign(is_running: true)
+        |> assign_timer(speed)
+      end
+
+    {:noreply, new_socket}
   end
 
   def handle_event("next_step", _, socket) do
     if !socket.assigns.is_running do
       {:noreply, tick_game(socket)}
     else
-      # Do nothing if game is running
       {:noreply, socket}
     end
   end
 
   def handle_event("clear", _, socket) do
+    socket.assigns.timer && Process.cancel_timer(socket.assigns.timer)
+
     new_socket =
       assign(socket,
         live_cells: MapSet.new(),
         is_running: false,
-        generation: 0
+        generation: 0,
+        timer: nil
       )
 
     {:noreply, new_socket}
   end
 
-  def handle_event("set_speed", %{"value" => speed_str}, socket) do
-    {:noreply, assign(socket, :speed, String.to_integer(speed_str))}
+  def handle_event("set_speed", %{"speed" => speed_str}, socket) do
+    speed = String.to_integer(speed_str)
+    socket = assign(socket, :speed, speed)
+
+    if socket.assigns.is_running do
+      # Cancel the old timer and schedule a new one with the updated speed.
+      socket.assigns.timer && Process.cancel_timer(socket.assigns.timer)
+
+      {:noreply, assign_timer(socket, speed)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  defp assign_timer(socket, speed) do
+    assign(socket, timer: Process.send_after(self(), :tick, speed))
   end
 
   @impl true
   def handle_info(:tick, %{assigns: %{is_running: true, speed: speed}} = socket) do
-    Process.send_after(self(), :tick, speed)
-    {:noreply, tick_game(socket)}
+    # The timer has fired. We run the game logic and schedule the next tick.
+    socket =
+      socket
+      |> tick_game()
+      |> assign_timer(speed)
+
+    {:noreply, socket}
   end
 
   def handle_info(:tick, socket) do
