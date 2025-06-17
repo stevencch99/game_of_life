@@ -43,20 +43,21 @@
 
   <div class="speed-control max-w-md mx-auto mb-4">
     <label for="speed" class="block text-sm font-medium text-gray-700 text-center">
-      Speed: {@speed} ms (Slower - Faster)
+      Speed: {@speed} ms (Faster - Slower)
     </label>
     <!-- TODO: implement speed slider -->
-    <input
-      type="range"
-      id="speed"
-      min="50"
-      max="1000"
-      step="50"
-      value={@speed}
-      phx-change="set_speed"
-      phx-debounce="100"
-      class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-    />
+    <form phx-change="set_speed">
+      <input
+        type="range"
+        id="speed"
+        name="speed"
+        min="100"
+        max="1000"
+        step="50"
+        value={@speed}
+        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+      />
+    </form>
   </div>
 
   <p class="text-center text-lg font-medium">Generation: {@generation}</p>
