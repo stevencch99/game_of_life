@@ -37,19 +37,20 @@ defmodule GameOfLife.Game do
 
   """
   def tick(live_cells) when is_struct(live_cells, MapSet) do
-    # Consider all live cells and their neighbors as candidates for the next generation.
-    candidates =
-      live_cells
-      |> Enum.flat_map(&neighbors/1)
-      |> Enum.uniq()
-      |> MapSet.new()
-      |> MapSet.union(live_cells)
+    live_cells
+    |> calculate_candidates()
+    |> Enum.filter(&survives?(&1, live_cells))
+    |> MapSet.new()
+  end
 
-    for cell <- candidates,
-        survives?(cell, live_cells),
-        into: MapSet.new() do
-      cell
-    end
+  # Find all cells that need to be considered for the next generation.
+  # This includes all live cells and their neighbors.
+  defp calculate_candidates(live_cells) do
+    live_cells
+    |> Enum.flat_map(&neighbors/1)
+    |> Enum.uniq()
+    |> MapSet.new()
+    |> MapSet.union(live_cells)
   end
 
   defp count_live_neighbors(cell, live_cells) do
