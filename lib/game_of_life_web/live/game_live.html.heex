@@ -1,4 +1,4 @@
-<div class="container mx-auto p-4">
+<div class="container mx-auto p-4 text-zinc-900">
   <h1 class="text-3xl font-bold mb-6 text-center">Conway's Game of Life</h1>
 
   <div class="grid-container mx-auto mb-6" style={@grid_style}>
@@ -13,30 +13,20 @@
     <% end %>
   </div>
 
-  <div class="controls text-center space-y-4 md:space-y-0 md:space-x-2 mb-6">
-    <button
-      phx-click="start_stop"
-      class={[
-        "px-6 py-2 font-semibold rounded-lg shadow-md bg-blue-500 hover:bg-blue-600",
-        @is_running && "bg-yellow-500 hover:bg-yellow-600"
-      ]}
-    >
+  <div class="text-center flex gap-2 justify-center">
+    <button phx-click="start_stop" class="btn btn-primary btn-outline">
       {if @is_running, do: "Pause", else: "Start"}
     </button>
     <button
-      disabled={@is_running}
       phx-click="next_step"
       class={[
-        "px-6 py-2 bg-green-500 text-white font-semibold rounded-lg shadow-md",
-        if(@is_running, do: "cursor-not-allowed", else: "hover:bg-green-600")
+        "btn",
+        (@is_running && "btn-disabled") || "btn-outline btn-neutral"
       ]}
     >
       Next Step
     </button>
-    <button
-      phx-click="clear"
-      class="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md"
-    >
+    <button phx-click="clear" class="btn btn-outline btn-secondary">
       Clear
     </button>
   </div>
