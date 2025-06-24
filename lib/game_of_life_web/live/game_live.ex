@@ -10,18 +10,35 @@ defmodule GameOfLifeWeb.GameLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    socket =
-      assign(socket,
-        grid_size: @grid_size,
-        live_cells: initial_pattern(),
-        is_running: false,
-        speed: @default_speed,
-        generation: 0,
-        grid_style: grid_style_value(@grid_size),
-        timer: nil
-      )
+    {:ok, assign_defaults(socket)}
+  end
 
-    {:ok, socket}
+  defp assign_defaults(socket) do
+    assign(socket,
+      grid_size: @grid_size,
+      is_running: false,
+      speed: @default_speed,
+      generation: 0,
+      grid_style: grid_style_value(@grid_size),
+      timer: nil,
+      live_cells: MapSet.new()
+    )
+  end
+
+  defp assign_pattern(socket, pattern) do
+    assign(socket, live_cells: initial_pattern(pattern, socket.assigns.grid_size))
+  end
+
+  @impl true
+  def handle_params(params, _url, socket) do
+    socket =
+      if connected?(socket) do
+        assign_pattern(socket, Map.get(params, "pattern"))
+      else
+        socket
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -120,13 +137,37 @@ defmodule GameOfLifeWeb.GameLive do
     )
   end
 
-  defp initial_pattern do
-    pattern_glider()
-    # Or start empty: MapSet.new()
+  defp initial_pattern(pattern, grid_size) do
+    # 計算網格中心點
+    center_x = div(grid_size, 2)
+    center_y = div(grid_size, 2)
+
+    # Get pattern by pattern name
+    pattern = GameOfLife.Patterns.get_pattern(pattern, grid_size)
+
+    # Calculate pattern boundaries
+    {min_x, max_x, min_y, max_y} = pattern_boundaries(pattern)
+
+    # Calculate offset to center the pattern
+    offset_x = center_x - div(min_x + max_x, 2)
+    offset_y = center_y - div(min_y + max_y, 2)
+
+    # Offset pattern coordinates
+    pattern
+    |> Enum.map(fn {x, y} -> {x + offset_x, y + offset_y} end)
+    |> MapSet.new()
   end
 
-  def pattern_glider do
-    MapSet.new([{1, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2}])
+  # Calculate pattern boundaries (minimum and maximum x, y coordinates)
+  defp pattern_boundaries(pattern) do
+    Enum.reduce(pattern, {999, -999, 999, -999}, fn {x, y}, {min_x, max_x, min_y, max_y} ->
+      {
+        min(min_x, x),
+        max(max_x, x),
+        min(min_y, y),
+        max(max_y, y)
+      }
+    end)
   end
 
   def cell_class(cell, live_cells) do
