@@ -1,23 +1,38 @@
 defmodule GameOfLife.Patterns do
+  @doc """
+  Get pattern by pattern name, fallback to random pattern if pattern not found.
 
-  @spec get_pattern(nil | binary() | atom(), integer()) :: MapSet.t()
+  ## Parameters
+
+    - pattern: pattern name, can be binary or atom
+    - grid_size: grid size
+
+  ## Examples
+
+      iex> GameOfLife.Patterns.get_pattern("glider", 100)
+      MapSet.new([{1, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2}])
+  """
+  @spec get_pattern(binary() | atom() | nil, integer()) :: MapSet.t()
   def get_pattern(nil, grid_size) do
+    # When pattern is nil, return a random pattern
     random(grid_size)
   end
 
-  def get_pattern(pattern, _grid_size) when is_binary(pattern) or is_atom(pattern) do
-    get_pattern(pattern)
+  def get_pattern(pattern, grid_size) when is_binary(pattern) do
+    with {:ok, atom} <- safe_to_atom(pattern),
+         true <- function_exported?(__MODULE__, atom, 0) do
+      apply(__MODULE__, atom, [])
+    else
+      _ -> random(grid_size)
+    end
   end
 
-  @spec get_pattern(binary() | atom()) :: MapSet.t()
-  def get_pattern(pattern) when is_binary(pattern) do
-    pattern
-    |> String.to_existing_atom()
-    |> get_pattern()
-  end
-
-  def get_pattern(pattern) when is_atom(pattern) do
-    apply(__MODULE__, pattern, [])
+  defp safe_to_atom(str) do
+    try do
+      {:ok, String.to_existing_atom(str)}
+    rescue
+      ArgumentError -> :error
+    end
   end
 
   @spec glider() :: MapSet.t()
