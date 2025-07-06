@@ -1,4 +1,37 @@
 defmodule GameOfLife.Patterns do
+  defmodule Pattern do
+    @moduledoc """
+    Pattern struct, which contains the pattern name, description, category, and cells data
+    used to represent a pattern in the game.
+    """
+
+    defstruct [:id, :name, :description, :category, :cells]
+
+    @type t :: %__MODULE__{
+            id: atom(),
+            name: String.t(),
+            description: String.t(),
+            category: atom(),
+            cells: MapSet.t({integer(), integer()})
+          }
+  end
+
+  # Patterns listed in the preview section (Life Lexicon)
+  @preview_pattern_ids [
+    :tower,
+    :glider,
+    :block,
+    :beehive,
+    :loaf,
+    :blinker,
+    :toad,
+    :beacon,
+    :acorn,
+    :puffer,
+    :r_pentomino,
+    :glider_gun
+  ]
+
   @doc """
   Get pattern by pattern name, fallback to random pattern if pattern not found.
 
@@ -19,12 +52,135 @@ defmodule GameOfLife.Patterns do
   end
 
   def get_pattern(pattern, grid_size) when is_binary(pattern) do
-    with {:ok, atom} <- safe_to_atom(pattern),
-         true <- function_exported?(__MODULE__, atom, 0) do
-      apply(__MODULE__, atom, [])
-    else
-      _ -> random(grid_size)
+    case get_pattern_by_id(pattern) do
+      %{cells: cells} ->
+        cells
+
+      nil ->
+        with {:ok, atom} <- safe_to_atom(pattern),
+             true <- function_exported?(__MODULE__, atom, 0) do
+          apply(__MODULE__, atom, [])
+        else
+          _ -> random(grid_size)
+        end
     end
+  end
+
+  @doc """
+  Get pattern metadata by ID.
+  """
+  @spec get_pattern_by_id(atom() | binary()) :: Pattern.t() | nil
+  def get_pattern_by_id(id) when is_atom(id) do
+    Enum.find(all_patterns(), &(&1.id == id))
+  end
+
+  def get_pattern_by_id(id) when is_binary(id) do
+    with {:ok, atom_id} <- safe_to_atom(id) do
+      get_pattern_by_id(atom_id)
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Get all patterns that should be shown in the preview.
+  """
+  @spec get_preview_patterns() :: [Pattern.t()]
+  def get_preview_patterns do
+    Enum.filter(all_patterns(), fn pattern -> pattern.id in @preview_pattern_ids end)
+  end
+
+  @doc """
+  Get all patterns with metadata.
+  """
+  @spec all_patterns() :: [Pattern.t()]
+  def all_patterns do
+    [
+      %Pattern{
+        id: :glider,
+        name: "Glider",
+        description: "一個會沿對角線移動的圖案，是已知體積最小的太空船。",
+        category: :spaceships,
+        cells: glider()
+      },
+      %Pattern{
+        id: :block,
+        name: "Block",
+        description: "最簡單的靜態生命形式。",
+        category: :still_lifes,
+        cells: block()
+      },
+      %Pattern{
+        id: :beehive,
+        name: "Beehive",
+        description: "常見的六格靜態生命形式。",
+        category: :still_lifes,
+        cells: beehive()
+      },
+      %Pattern{
+        id: :loaf,
+        name: "Loaf",
+        description: "一種七格靜態生命形式。",
+        category: :still_lifes,
+        cells: loaf()
+      },
+      %Pattern{
+        id: :blinker,
+        name: "Blinker",
+        description: "最小的週期為 2 的震盪器。",
+        category: :oscillators,
+        cells: blinker()
+      },
+      %Pattern{
+        id: :toad,
+        name: "Toad",
+        description: "週期為 2 的六格震盪器。",
+        category: :oscillators,
+        cells: toad()
+      },
+      %Pattern{
+        id: :beacon,
+        name: "Beacon",
+        description: "週期為 2 的八格震盪器。",
+        category: :oscillators,
+        cells: beacon()
+      },
+      %Pattern{
+        id: :acorn,
+        name: "Acorn",
+        description: "一種會產生高度複雜演化的圖案。",
+        category: :methuselahs,
+        cells: acorn()
+      },
+      %Pattern{
+        id: :puffer,
+        name: "Puffer",
+        description: "一種會在移動時留下痕跡的圖案。",
+        category: :puffers,
+        cells: puffer()
+      },
+      %Pattern{
+        id: :r_pentomino,
+        name: "R-pentomino",
+        description: "一個會產生複雜演化的五格圖案。",
+        category: :methuselahs,
+        cells: r_pentomino()
+      },
+      %Pattern{
+        id: :glider_gun,
+        name: "Gosper Glider Gun",
+        description: "會持續產生滑翔機的圖案。",
+        category: :guns,
+        cells: glider_gun()
+      },
+      %Pattern{
+        id: :tower,
+        name: "Tower",
+        description: "我意外發現的長壽圖案，演化 1000 代後仍然存在。",
+        category: :methuselahs,
+        cells: tower()
+      }
+    ]
   end
 
   defp safe_to_atom(str) do
