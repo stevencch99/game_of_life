@@ -2,6 +2,7 @@ defmodule GameOfLifeWeb.GameLive do
   use GameOfLifeWeb, :live_view
 
   alias GameOfLife.Game
+  import GameOfLifeWeb.Components.PatternPreview, only: [pattern_preview: 1]
 
   # Default grid size
   @grid_size 100
@@ -21,7 +22,8 @@ defmodule GameOfLifeWeb.GameLive do
       generation: 0,
       grid_style: grid_style_value(@grid_size),
       timer: nil,
-      live_cells: MapSet.new()
+      live_cells: MapSet.new(),
+      preview_patterns: GameOfLife.Patterns.get_preview_patterns()
     )
   end
 
@@ -184,6 +186,6 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   defp grid_style_value(grid_size) do
-    "display: grid; grid-template-columns: repeat(#{grid_size}, minmax(0, 1fr)); grid-template-rows: repeat(#{grid_size}, minmax(0, 1fr)); width: min(80vw, 600px); height: min(80vw, 600px); border: 1px solid #ccc; aspect-ratio: 1/1;"
+    "grid-template-columns: repeat(#{grid_size}, minmax(0, 1fr)); grid-template-rows: repeat(#{grid_size}, minmax(0, 1fr));"
   end
 end

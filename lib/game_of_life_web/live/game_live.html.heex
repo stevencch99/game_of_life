@@ -1,55 +1,86 @@
-<div class="mx-auto p-4 text-zinc-900">
-  <h1 class="text-3xl font-bold mb-6 text-center">Conway's Game of Life</h1>
+<div class="py-4 px-8 text-zinc-900">
+  <h1 class="text-2xl font-bold mb-2 text-center">Conway's Game of Life</h1>
 
-  <div id="game-grid" class="mx-auto mb-6" style={@grid_style}>
-    <%= for y <- 0..(@grid_size - 1), x <- 0..(@grid_size - 1) do %>
+  <div class="flex gap-6 flex-col lg:flex-row">
+    <!-- 左側遊戲區域 -->
+    <div class="flex-1 flex flex-col items-center gap-2">
       <div
-        class={["border border-gray-200", cell_class({x, y}, @live_cells)]}
-        phx-click="toggle_cell"
-        phx-value-x={x}
-        phx-value-y={y}
+        id="game-grid"
+        class="grid border border-gray-300 aspect-square w-[80vw] max-w-[700px] h-[80vw] max-h-[700px]"
+        style={@grid_style}
       >
+        <%= for y <- 0..(@grid_size - 1), x <- 0..(@grid_size - 1) do %>
+          <div
+            class={["border border-gray-200", cell_class({x, y}, @live_cells)]}
+            phx-click="toggle_cell"
+            phx-value-x={x}
+            phx-value-y={y}
+          >
+          </div>
+        <% end %>
       </div>
-    <% end %>
-  </div>
 
-  <div class="text-center flex gap-2 justify-center">
-    <button phx-click="start_stop" class="btn btn-primary btn-outline">
-      {if @is_running, do: "Pause", else: "Start"}
-    </button>
-    <button
-      phx-click="next_step"
-      class={[
-        "btn",
-        (@is_running && "btn-disabled") || "btn-outline btn-neutral"
-      ]}
+      <div class="text-center flex gap-2 justify-center">
+        <button phx-click="start_stop" class="btn btn-primary btn-outline">
+          {if @is_running, do: "Pause", else: "Start"}
+        </button>
+        <button
+          phx-click="next_step"
+          class={[
+            "btn",
+            (@is_running && "btn-disabled") || "btn-outline btn-neutral"
+          ]}
+        >
+          Next Step
+        </button>
+        <button phx-click="clear" class="btn btn-outline btn-secondary">
+          Clear
+        </button>
+      </div>
+
+      <div id="speed-control" class="w-full max-w-md mx-auto mb-4">
+        <label for="speed" class="block text-sm font-medium text-gray-700 text-center">
+          Speed: {@speed} ms (Faster - Slower)
+        </label>
+        <form phx-change="set_speed">
+          <input
+            type="range"
+            id="speed"
+            name="speed"
+            min="100"
+            max="1000"
+            step="100"
+            value={@speed}
+            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </form>
+      </div>
+
+      <p class="text-center text-lg font-medium">Generation: {@generation}</p>
+      <p class="text-sm text-gray-600 text-center">Click on a cell to toggle its state.</p>
+    </div>
+
+    <div
+      id="life-lexicon"
+      class="w-[350px] bg-white rounded-lg p-4 overflow-y-auto max-h-[80vh] shadow-sm"
     >
-      Next Step
-    </button>
-    <button phx-click="clear" class="btn btn-outline btn-secondary">
-      Clear
-    </button>
+      <!-- 右側 Life Lexicon 區塊 -->
+      <h2 class="text-xl font-bold mb-4 text-center">Life Lexicon</h2>
+      <div class="flex flex-col gap-4">
+        <.link
+          :for={pattern <- @preview_patterns}
+          patch={"#{pattern.id}"}
+          class="card shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-auto max-h-[240px]"
+        >
+          <div class="card-body p-4">
+            <h3 class="card-title text-lg">{pattern.name}</h3>
+            <p class="text-sm">{pattern.description}</p>
+            <div class="mt-2 flex justify-center">
+              <.pattern_preview pattern={pattern} padding={1} size={80} />
+            </div>
+          </div>
+        </.link>
+      </div>
+    </div>
   </div>
-
-  <div class="speed-control max-w-md mx-auto mb-4">
-    <label for="speed" class="block text-sm font-medium text-gray-700 text-center">
-      Speed: {@speed} ms (Faster - Slower)
-    </label>
-    <!-- TODO: implement speed slider -->
-    <form phx-change="set_speed">
-      <input
-        type="range"
-        id="speed"
-        name="speed"
-        min="100"
-        max="1000"
-        step="50"
-        value={@speed}
-        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-      />
-    </form>
-  </div>
-
-  <p class="text-center text-lg font-medium">Generation: {@generation}</p>
-  <p class="mt-4 text-sm text-gray-600 text-center">Click on a cell to toggle its state.</p>
 </div>
