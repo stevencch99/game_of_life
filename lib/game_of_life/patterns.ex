@@ -350,4 +350,101 @@ defmodule GameOfLife.Patterns do
     |> Enum.take(cells_count)
     |> MapSet.new()
   end
+
+  @doc """
+  將 RLE (Run Length Encoded) 格式的字串轉換為 MapSet 座標
+
+  RLE 是生命遊戲中常用的模式編碼格式，例如：
+  - `bo$2bo$3o!` 表示一個 glider
+  - `b` 代表死細胞
+  - `o` 代表活細胞
+  - `$` 代表換行
+  - 數字表示重複次數
+  - `!` 表示結束
+
+  ## 參數
+  - rle: RLE 格式的字串
+
+  ## 返回
+  - MapSet 格式的座標集合
+
+  ## 範例
+      iex> rle_to_cells("bo$2bo$3o!")
+      #MapSet<[{0, 2}, {1, 0}, {1, 2}, {2, 1}, {2, 2}]>
+  """
+  @spec rle_to_cells(String.t()) :: MapSet.t()
+  def rle_to_cells(rle) do
+    # 移除所有空白字符
+    rle = String.replace(rle, ~r/\s+/, "")
+
+    # 解析 RLE 字串
+    {cells, _} = parse_rle(rle, 0, 0, MapSet.new())
+    cells
+  end
+
+  # 解析 RLE 字串的遞迴函數
+  defp parse_rle("", _, _, cells), do: {cells, ""}
+  defp parse_rle("!" <> _, _, _, cells), do: {cells, ""}
+
+  defp parse_rle(rle, x, y, cells) do
+    # 嘗試匹配數字（重複次數）
+    case Regex.run(~r/^(\d+)(.*)$/, rle) do
+      [_, count_str, rest] ->
+        # 找到數字，解析為重複次數
+        count = String.to_integer(count_str)
+        parse_rle_with_count(rest, count, x, y, cells)
+
+      nil ->
+        # 沒有數字，處理單個字符
+        <<char::utf8, rest::binary>> = rle
+        parse_rle_char(char, rest, x, y, cells)
+    end
+  end
+
+  # 處理帶有重複次數的 RLE
+  defp parse_rle_with_count(<<char::utf8, rest::binary>>, count, x, y, cells) do
+    case char do
+      ?b ->
+        # 死細胞，只移動 x 座標
+        parse_rle(rest, x + count, y, cells)
+
+      ?o ->
+        # 活細胞，添加到 cells 並移動 x 座標
+        new_cells =
+          Enum.reduce(0..(count - 1), cells, fn i, acc ->
+            MapSet.put(acc, {x + i, y})
+          end)
+
+        parse_rle(rest, x + count, y, new_cells)
+
+      ?$ ->
+        # 換行，重置 x 座標並增加 y 座標
+        parse_rle(rest, 0, y + count, cells)
+
+      _ ->
+        # 未知字符，忽略
+        parse_rle(rest, x, y, cells)
+    end
+  end
+
+  # 處理單個字符的 RLE
+  defp parse_rle_char(char, rest, x, y, cells) do
+    case char do
+      ?b ->
+        # 死細胞，只移動 x 座標
+        parse_rle(rest, x + 1, y, cells)
+
+      ?o ->
+        # 活細胞，添加到 cells 並移動 x 座標
+        parse_rle(rest, x + 1, y, MapSet.put(cells, {x, y}))
+
+      ?$ ->
+        # 換行，重置 x 座標並增加 y 座標
+        parse_rle(rest, 0, y + 1, cells)
+
+      _ ->
+        # 未知字符，忽略
+        parse_rle(rest, x, y, cells)
+    end
+  end
 end
