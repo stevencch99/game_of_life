@@ -23,7 +23,10 @@ defmodule GameOfLifeWeb.GameLive do
       grid_style: grid_style_value(@grid_size),
       timer: nil,
       live_cells: MapSet.new(),
-      preview_patterns: GameOfLife.Patterns.get_preview_patterns()
+      preview_patterns: GameOfLife.Patterns.get_preview_patterns(),
+      show_rle_input: false,
+      rle_input: "",
+      rle_preview_cells: nil
     )
   end
 
@@ -67,6 +70,7 @@ defmodule GameOfLifeWeb.GameLive do
 
     new_socket =
       if is_running do
+        # TODO: refactor this reset timer logic by extract into a private function
         # Stop the game and cancel the timer
         if timer, do: Process.cancel_timer(timer)
         assign(socket, is_running: false, timer: nil)
@@ -111,6 +115,47 @@ defmodule GameOfLifeWeb.GameLive do
       socket.assigns.timer && Process.cancel_timer(socket.assigns.timer)
 
       {:noreply, assign_timer(socket, speed)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("toggle_rle_input", _, socket) do
+    {:noreply, assign(socket, :show_rle_input, !socket.assigns.show_rle_input)}
+  end
+
+  def handle_event("preview_rle", %{"value" => rle}, socket) do
+    preview_cells =
+      if String.trim(rle) != "" do
+        GameOfLife.Patterns.rle_to_cells(rle)
+      else
+        nil
+      end
+
+    {:noreply, assign(socket, rle_input: rle, rle_preview_cells: preview_cells)}
+  end
+
+  def handle_event("import_rle", _, %{assigns: %{rle_input: rle}} = socket) do
+    if String.trim(rle) != "" do
+      cells =
+        rle
+        |> GameOfLife.Patterns.rle_to_cells()
+        |> GameOfLife.PatternUtils.center_pattern(socket.assigns.grid_size)
+
+      # update game state
+      socket =
+        assign(socket,
+          live_cells: cells,
+          generation: 0,
+          is_running: false
+        )
+
+      # TODO: refactor this reset timer logic by extract into a private function
+      # cancel timer if running
+      if socket.assigns.timer, do: Process.cancel_timer(socket.assigns.timer)
+      socket = assign(socket, timer: nil)
+
+      {:noreply, socket}
     else
       {:noreply, socket}
     end

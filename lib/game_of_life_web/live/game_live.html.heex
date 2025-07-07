@@ -66,6 +66,40 @@
     >
       <!-- 右側 Life Lexicon 區塊 -->
       <h2 class="text-xl font-bold mb-4 text-center">Life Lexicon</h2>
+
+      <div id="rle-input-panel" class="mb-6 border-b pb-4">
+        <!-- RLE 輸入區 -->
+
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="font-medium">RLE 輸入</h3>
+          <button phx-click="toggle_rle_input" class="btn btn-xs btn-ghost">
+            {if @show_rle_input, do: "收起", else: "展開"}
+          </button>
+        </div>
+
+        <div class={!@show_rle_input && "hidden"}>
+          <textarea
+            phx-keyup="preview_rle"
+            phx-debounce="300"
+            class="textarea textarea-neutral textarea-bordered w-full h-24 text-sm bg-white text-black"
+            placeholder="貼上 RLE 格式..."
+            value={@rle_input}
+          />
+
+          <div class="mt-2 flex justify-between items-center">
+            <div class="preview-container border p-2 w-24 h-24 bg-white">
+              <!-- 小型預覽 -->
+              <.pattern_preview
+                :if={@rle_preview_cells != nil}
+                pattern={%{cells: @rle_preview_cells}}
+                padding={0}
+                size={80}
+              />
+            </div>
+            <button phx-click="import_rle" class="btn btn-sm btn-primary">匯入</button>
+          </div>
+        </div>
+      </div>
       <div class="flex flex-col gap-4">
         <.link
           :for={pattern <- @preview_patterns}
