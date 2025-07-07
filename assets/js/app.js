@@ -24,19 +24,56 @@ import topbar from '../vendor/topbar';
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute('content');
 
+// ---- Utility helpers (temporary, will move to separate file later) ----
+const coordToKey = (x, y) => `${x},${y}`;
+const keyToCoord = (key) => key.split(',').map(Number);
+
+const applyCellsDiff = (set, add = [], remove = []) => {
+  add.forEach(([x, y]) => set.add(coordToKey(x, y)));
+  remove.forEach(([x, y]) => set.delete(coordToKey(x, y)));
+};
+
+const parseLiveCellsPayload = (payload) => {
+  if (!payload) return { add: [], remove: [], full: [] };
+  if (Array.isArray(payload.live_cells)) {
+    return { full: payload.live_cells };
+  }
+  return {
+    add: payload.add || [],
+    remove: payload.remove || [],
+  };
+};
+
+// ----------------------------------------------------------------------
 const Hooks = {};
 Hooks.GameCanvas = {
   mounted() {
+    this.initCanvas();
+    this.registerEvents();
+    this.listenLiveView();
+  },
+
+  //---------------- initialization ------------------
+  initCanvas() {
     this.canvas = this.el;
     this.ctx = this.canvas.getContext('2d');
     this.gridSize = parseInt(this.el.dataset.gridSize);
+
+    // State
+    this.liveCells = new Set();
     this.updateLiveCellsFromElement();
 
     this.resizeCanvas();
     this.drawGrid();
+    this.drawCells();
+  },
 
+  //---------------- event listeners ------------------
+  registerEvents() {
+    // Resize
     window.addEventListener('resize', () => this.resizeCanvas());
 
+    // Click toggle
     this.el.addEventListener('click', (e) => {
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -48,32 +85,31 @@ Hooks.GameCanvas = {
 
       this.pushEvent('toggle_cell', { x: cellX, y: cellY });
     });
+  },
 
+  //---------------- Phoenix LiveView events ------------------
+  listenLiveView() {
     this.handleEvent('update_cells', (event) => {
       try {
-        const live_cells = event.live_cells || (event.payload && event.payload.live_cells) || [];
+        const { full, add, remove } = parseLiveCellsPayload(event.payload ?? event);
 
-        // Convert array of [x,y] to Set of "x,y" strings
-        this.liveCells = new Set(
-          live_cells
-            .map((cell) => {
-              if (Array.isArray(cell) && cell.length === 2) {
-                return `${cell[0]},${cell[1]}`;
-              }
-              console.warn('Invalid cell format:', cell);
-              return null;
-            })
-            .filter(Boolean)
-        );
+        if (full) {
+          // Replace entire set
+          this.liveCells = new Set(full.map(([x, y]) => coordToKey(x, y)));
+        } else {
+          applyCellsDiff(this.liveCells, add, remove);
+        }
 
-        this.el.dataset.liveCells = JSON.stringify(live_cells);
-        this.drawGrid();
+        // Sync to dataset for LV re-mount
+        this.el.dataset.liveCells = JSON.stringify(Array.from(this.liveCells).map(keyToCoord));
+        this.drawCells();
       } catch (error) {
         console.error('Error in update_cells handler:', error, 'Event data:', event);
       }
     });
   },
 
+  //---------------- helpers ------------------
   updateLiveCellsFromElement() {
     try {
       const liveCellsData = this.el.dataset.liveCells;
@@ -94,17 +130,23 @@ Hooks.GameCanvas = {
     this.canvas.width = size;
     this.canvas.height = size;
     this.drawGrid();
+    this.drawCells();
   },
 
+  // Draw static grid lines; called on resize only
   drawGrid() {
     const cellSize = this.canvas.width / this.gridSize;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw live cells
+  },
+
+  // Draw live cells only
+  drawCells() {
+    const cellSize = this.canvas.width / this.gridSize;
     this.ctx.fillStyle = 'rgb(18, 18, 22)';
 
-    if (this.liveCells.size === 0) {
-    }
+    // clear previous cells layer
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.liveCells.forEach((cell) => {
       const [x, y] = cell.split(',').map(Number);
