@@ -66,14 +66,14 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   def handle_event("start_stop", _, socket) do
-    %{is_running: is_running, timer: timer, speed: speed} = socket.assigns
+    %{is_running: is_running, speed: speed} = socket.assigns
 
     new_socket =
       if is_running do
-        # TODO: refactor this reset timer logic by extract into a private function
         # Stop the game and cancel the timer
-        if timer, do: Process.cancel_timer(timer)
-        assign(socket, is_running: false, timer: nil)
+        socket
+        |> assign(is_running: false)
+        |> maybe_reset_timer()
       else
         # Start the game and schedule the first tick
         socket
@@ -93,28 +93,27 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   def handle_event("clear", _, socket) do
-    socket.assigns.timer && Process.cancel_timer(socket.assigns.timer)
-
     new_socket =
-      assign(socket,
+      socket
+      |> maybe_reset_timer()
+      |> assign(
         live_cells: MapSet.new(),
         is_running: false,
-        generation: 0,
-        timer: nil
+        generation: 0
       )
 
     {:noreply, new_socket}
   end
 
   def handle_event("set_speed", %{"speed" => speed_str}, socket) do
-    speed = String.to_integer(speed_str)
-    socket = assign(socket, :speed, speed)
-
     if socket.assigns.is_running do
-      # Cancel the old timer and schedule a new one with the updated speed.
-      socket.assigns.timer && Process.cancel_timer(socket.assigns.timer)
-
-      {:noreply, assign_timer(socket, speed)}
+      speed = String.to_integer(speed_str)
+      # Reset the timer with the new speed
+      {:noreply,
+       socket
+       |> assign(:speed, speed)
+       |> maybe_reset_timer()
+       |> assign_timer(speed)}
     else
       {:noreply, socket}
     end
@@ -144,16 +143,13 @@ defmodule GameOfLifeWeb.GameLive do
 
       # update game state
       socket =
-        assign(socket,
+        socket
+        |> assign(
           live_cells: cells,
           generation: 0,
           is_running: false
         )
-
-      # TODO: refactor this reset timer logic by extract into a private function
-      # cancel timer if running
-      if socket.assigns.timer, do: Process.cancel_timer(socket.assigns.timer)
-      socket = assign(socket, timer: nil)
+        |> maybe_reset_timer()
 
       {:noreply, socket}
     else
@@ -161,8 +157,19 @@ defmodule GameOfLifeWeb.GameLive do
     end
   end
 
+  defp maybe_reset_timer(socket) do
+    if timer = socket.assigns.timer do
+      Process.cancel_timer(timer)
+      assign(socket, :timer, nil)
+    else
+      socket
+    end
+  end
+
   defp assign_timer(socket, speed) do
-    assign(socket, timer: Process.send_after(self(), :tick, speed))
+    socket
+    |> maybe_reset_timer()
+    |> assign(timer: Process.send_after(self(), :tick, speed))
   end
 
   @impl true
