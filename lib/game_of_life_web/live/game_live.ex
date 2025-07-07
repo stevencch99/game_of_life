@@ -4,6 +4,20 @@ defmodule GameOfLifeWeb.GameLive do
   alias GameOfLife.Game
   import GameOfLifeWeb.Components.PatternPreview, only: [pattern_preview: 1]
 
+  defp normalize(v) when is_integer(v), do: v
+  defp normalize(v) when is_binary(v), do: String.to_integer(v)
+  defp normalize(v), do: v
+
+  defp live_cells_to_list(cells) do
+    # 將 live_cells MapSet 結構轉成 [[x, y], ...]，並確保 x、y 為整數以供前端使用
+    MapSet.to_list(cells)
+    |> Enum.flat_map(fn
+      {x, y} -> [[normalize(x), normalize(y)]]
+      [x, y] -> [[normalize(x), normalize(y)]]
+      _ -> []
+    end)
+  end
+
   # Default grid size
   @grid_size 100
   # Default speed in ms
@@ -23,6 +37,7 @@ defmodule GameOfLifeWeb.GameLive do
       grid_style: grid_style_value(@grid_size),
       timer: nil,
       live_cells: MapSet.new(),
+      current_pattern: nil,
       preview_patterns: GameOfLife.Patterns.get_preview_patterns(),
       show_rle_input: false,
       rle_input: "",
@@ -30,21 +45,35 @@ defmodule GameOfLifeWeb.GameLive do
     )
   end
 
-  defp assign_pattern(socket, pattern) do
-    assign(socket, live_cells: initial_pattern(pattern, socket.assigns.grid_size))
+  defp assign_pattern(socket, nil), do: socket
+
+  defp assign_pattern(socket, pattern) when is_binary(pattern) do
+    live_cells = initial_pattern(pattern, socket.assigns.grid_size)
+
+    socket
+    |> assign(
+      live_cells: live_cells,
+      generation: 0,
+      current_pattern: pattern
+    )
+    |> update_game_canvas(live_cells)
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(%{"pattern" => pattern}, _url, socket) do
     socket =
-      if connected?(socket) do
-        # 客戶端已連接：載入完整互動功能
-        # 這時候使用者瀏覽器已經準備好處理動態內容，不會影響首次顯示內容所需時間 (FCP)
-        assign_pattern(socket, Map.get(params, "pattern"))
+      socket
+      |> assign(:current_pattern, pattern)
+      |> assign_pattern(pattern)
+
+    {:noreply, socket}
+  end
+
+  def handle_params(_params, _url, socket) do
+    socket =
+      if is_nil(socket.assigns[:current_pattern]) do
+        assign(socket, :current_pattern, "glider")
       else
-        # 初始靜態渲染：優化 SEO 和核心網頁指標
-        # 搜尋引擎爬蟲一進頁面就可直接抓到所有必要的內容與標籤（如標題、描述、圖片、文章內容等）
-        # 可提升頁面排名和使用者體驗
         socket
       end
 
@@ -52,21 +81,25 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   @impl true
-  def handle_event("toggle_cell", %{"x" => x_str, "y" => y_str}, socket) do
-    cell = {String.to_integer(x_str), String.to_integer(y_str)}
+  def handle_event("toggle_cell", %{"x" => x, "y" => y}, socket) do
+    x_int = if is_binary(x), do: String.to_integer(x), else: x
+    y_int = if is_binary(y), do: String.to_integer(y), else: y
+    cell = {x_int, y_int}
 
     new_live_cells =
-      if cell in socket.assigns.live_cells do
+      if MapSet.member?(socket.assigns.live_cells, cell) do
         MapSet.delete(socket.assigns.live_cells, cell)
       else
         MapSet.put(socket.assigns.live_cells, cell)
       end
 
-    {:noreply, assign(socket, :live_cells, new_live_cells)}
+    socket = assign(socket, live_cells: new_live_cells)
+
+    {:noreply, update_game_canvas(socket, new_live_cells)}
   end
 
   def handle_event("start_stop", _, socket) do
-    %{is_running: is_running, speed: speed} = socket.assigns
+    %{is_running: is_running, speed: speed, live_cells: _live_cells} = socket.assigns
 
     new_socket =
       if is_running do
@@ -75,7 +108,7 @@ defmodule GameOfLifeWeb.GameLive do
         |> assign(is_running: false)
         |> maybe_reset_timer()
       else
-        # Start the game and schedule the first tick
+        # Start the game with current live cells and schedule the first tick
         socket
         |> assign(is_running: true)
         |> assign_timer(speed)
@@ -146,6 +179,7 @@ defmodule GameOfLifeWeb.GameLive do
           is_running: false
         )
         |> maybe_reset_timer()
+        |> update_game_canvas(cells)
 
       {:noreply, socket}
     else
@@ -184,56 +218,33 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   defp tick_game(socket) do
-    new_live_cells = Game.tick(socket.assigns.live_cells)
+    %{live_cells: current_cells, generation: generation} = socket.assigns
 
-    assign(socket,
+    new_live_cells = Game.tick(current_cells)
+
+    socket
+    |> assign(
       live_cells: new_live_cells,
-      generation: socket.assigns.generation + 1
+      generation: generation + 1
     )
+    |> update_game_canvas(new_live_cells)
   end
 
-  defp initial_pattern(pattern, grid_size) do
-    # 計算網格中心點
-    center_x = div(grid_size, 2)
-    center_y = div(grid_size, 2)
-
-    # Get pattern by pattern name
-    pattern = GameOfLife.Patterns.get_pattern(pattern, grid_size)
-
-    # Calculate pattern boundaries
-    {min_x, max_x, min_y, max_y} = pattern_boundaries(pattern)
-
-    # Calculate offset to center the pattern
-    offset_x = center_x - div(min_x + max_x, 2)
-    offset_y = center_y - div(min_y + max_y, 2)
-
-    # Offset pattern coordinates
-    pattern
-    |> Enum.map(fn {x, y} -> {x + offset_x, y + offset_y} end)
-    |> MapSet.new()
-  end
-
-  # Calculate pattern boundaries (minimum and maximum x, y coordinates)
-  defp pattern_boundaries(pattern) do
-    Enum.reduce(pattern, {999, -999, 999, -999}, fn {x, y}, {min_x, max_x, min_y, max_y} ->
-      {
-        min(min_x, x),
-        max(max_x, x),
-        min(min_y, y),
-        max(max_y, y)
-      }
-    end)
-  end
-
-  def cell_class(cell, live_cells) do
-    if cell in live_cells do
-      "bg-black"
-    else
-      "bg-white hover:bg-gray-100"
-    end
+  @spec initial_pattern(binary() | atom(), integer()) :: MapSet.t()
+  defp initial_pattern(pattern_name, grid_size) do
+    pattern_name
+    |> GameOfLife.Patterns.get_pattern(grid_size)
+    |> GameOfLife.PatternUtils.center_pattern(grid_size)
   end
 
   defp grid_style_value(grid_size) do
     "grid-template-columns: repeat(#{grid_size}, minmax(0, 1fr)); grid-template-rows: repeat(#{grid_size}, minmax(0, 1fr));"
+  end
+
+  defp update_game_canvas(socket, live_cells) do
+    push_event(socket, "update_cells", %{
+      to: "#game-canvas",
+      payload: %{live_cells: live_cells_to_list(live_cells)}
+    })
   end
 end

@@ -4,21 +4,17 @@
   <div class="flex gap-6 flex-col lg:flex-row">
     <!-- 左側遊戲區域 -->
     <div class="flex-1 flex flex-col items-center gap-2">
-      <div
-        id="game-grid"
-        class="grid border border-gray-300 aspect-square w-[80vw] max-w-[700px] h-[80vw] max-h-[700px]"
-        style={@grid_style}
+      <% live_cells_list = live_cells_to_list(@live_cells)
+      live_cells_json = Jason.encode!(live_cells_list) %>
+      <canvas
+        id="game-canvas"
+        class="border border-gray-300 aspect-square w-[80vw] max-w-[700px] h-[80vw] max-h-[700px]"
+        phx-hook="GameCanvas"
+        phx-update="ignore"
+        data-grid-size={@grid_size}
+        data-live-cells={live_cells_json}
       >
-        <%= for y <- 0..(@grid_size - 1), x <- 0..(@grid_size - 1) do %>
-          <div
-            class={["border border-gray-200", cell_class({x, y}, @live_cells)]}
-            phx-click="toggle_cell"
-            phx-value-x={x}
-            phx-value-y={y}
-          >
-          </div>
-        <% end %>
-      </div>
+      </canvas>
 
       <div class="text-center flex gap-2 justify-center">
         <button phx-click="start_stop" class="btn btn-primary btn-outline">
