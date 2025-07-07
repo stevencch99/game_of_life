@@ -93,9 +93,19 @@ defmodule GameOfLifeWeb.GameLive do
         MapSet.put(socket.assigns.live_cells, cell)
       end
 
+    add_set =
+      if MapSet.member?(socket.assigns.live_cells, cell),
+        do: MapSet.new(),
+        else: MapSet.new([cell])
+
+    remove_set =
+      if MapSet.member?(socket.assigns.live_cells, cell),
+        do: MapSet.new([cell]),
+        else: MapSet.new()
+
     socket = assign(socket, live_cells: new_live_cells)
 
-    {:noreply, update_game_canvas(socket, new_live_cells)}
+    {:noreply, update_game_canvas_diff(socket, add_set, remove_set)}
   end
 
   def handle_event("start_stop", _, socket) do
@@ -222,12 +232,18 @@ defmodule GameOfLifeWeb.GameLive do
 
     new_live_cells = Game.tick(current_cells)
 
-    socket
-    |> assign(
-      live_cells: new_live_cells,
-      generation: generation + 1
-    )
-    |> update_game_canvas(new_live_cells)
+    # diff calculation
+    add_set = MapSet.difference(new_live_cells, current_cells)
+    remove_set = MapSet.difference(current_cells, new_live_cells)
+
+    socket =
+      socket
+      |> assign(
+        live_cells: new_live_cells,
+        generation: generation + 1
+      )
+
+    update_game_canvas_diff(socket, add_set, remove_set)
   end
 
   @spec initial_pattern(binary() | atom(), integer()) :: MapSet.t()
@@ -245,6 +261,17 @@ defmodule GameOfLifeWeb.GameLive do
     push_event(socket, "update_cells", %{
       to: "#game-canvas",
       payload: %{live_cells: live_cells_to_list(live_cells)}
+    })
+  end
+
+  # Diff variant: send only additions and removals
+  defp update_game_canvas_diff(socket, add_set, remove_set) do
+    push_event(socket, "update_cells", %{
+      to: "#game-canvas",
+      payload: %{
+        add: live_cells_to_list(add_set),
+        remove: live_cells_to_list(remove_set)
+      }
     })
   end
 end
