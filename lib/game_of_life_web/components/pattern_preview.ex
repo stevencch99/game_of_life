@@ -20,9 +20,14 @@ defmodule GameOfLifeWeb.Components.PatternPreview do
       <rect x="0" y="0" width="100%" height="100%" fill="white" stroke="#eee" stroke-width="0.1" />
       
     <!-- 繪製活細胞 -->
-      <%= for cell <- @precomputed_cells do %>
-        <rect x={cell.x} y={cell.y} width={@cell_size} height={@cell_size} fill="black" />
-      <% end %>
+      <rect
+        :for={cell <- @precomputed_cells}
+        x={cell.x}
+        y={cell.y}
+        width={@cell_size}
+        height={@cell_size}
+        fill="black"
+      />
     </svg>
     """
   end
