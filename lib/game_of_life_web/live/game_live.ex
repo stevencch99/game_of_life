@@ -11,7 +11,12 @@ defmodule GameOfLifeWeb.GameLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign_defaults(socket)}
+    socket =
+      socket
+      |> assign_defaults()
+      |> stream(:cells, [], dom_id: &cell_id/1)
+
+    {:ok, socket}
   end
 
   defp assign_defaults(socket) do
@@ -31,7 +36,8 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   defp assign_pattern(socket, pattern) do
-    assign(socket, live_cells: initial_pattern(pattern, socket.assigns.grid_size))
+    live_cells = initial_pattern(pattern, socket.assigns.grid_size)
+    put_live_cells(socket, live_cells)
   end
 
   @impl true
@@ -62,7 +68,15 @@ defmodule GameOfLifeWeb.GameLive do
         MapSet.put(socket.assigns.live_cells, cell)
       end
 
-    {:noreply, assign(socket, :live_cells, new_live_cells)}
+    add_set = if cell in new_live_cells, do: [cell], else: []
+    remove_set = if cell in socket.assigns.live_cells, do: [cell], else: []
+
+    socket =
+      socket
+      |> assign(live_cells: new_live_cells)
+      |> stream_apply_diff(add_set, remove_set)
+
+    {:noreply, socket}
   end
 
   def handle_event("start_stop", _, socket) do
@@ -86,7 +100,10 @@ defmodule GameOfLifeWeb.GameLive do
 
   def handle_event("next_step", _, socket) do
     if !socket.assigns.is_running do
-      {:noreply, tick_game(socket)}
+      new_live_cells = Game.tick(socket.assigns.live_cells)
+      socket = socket |> put_live_cells(new_live_cells) |> bump_generation()
+
+      {:noreply, socket}
     else
       {:noreply, socket}
     end
@@ -137,11 +154,15 @@ defmodule GameOfLifeWeb.GameLive do
         |> GameOfLife.Patterns.rle_to_cells()
         |> GameOfLife.PatternUtils.center_pattern(socket.assigns.grid_size)
 
-      # update game state
+      add_set = MapSet.to_list(cells)
+      remove_set = MapSet.to_list(socket.assigns.live_cells)
+
+      socket = stream_apply_diff(socket, add_set, remove_set)
+
       socket =
         socket
+        |> put_live_cells(cells)
         |> assign(
-          live_cells: cells,
           generation: 0,
           is_running: false
         )
@@ -170,26 +191,13 @@ defmodule GameOfLifeWeb.GameLive do
 
   @impl true
   def handle_info(:tick, %{assigns: %{is_running: true, speed: speed}} = socket) do
-    # The timer has fired. We run the game logic and schedule the next tick.
-    socket =
-      socket
-      |> tick_game()
-      |> assign_timer(speed)
-
-    {:noreply, socket}
+    new_live_cells = Game.tick(socket.assigns.live_cells)
+    socket = socket |> put_live_cells(new_live_cells) |> bump_generation()
+    {:noreply, assign_timer(socket, speed)}
   end
 
   def handle_info(:tick, socket) do
     {:noreply, socket}
-  end
-
-  defp tick_game(socket) do
-    new_live_cells = Game.tick(socket.assigns.live_cells)
-
-    assign(socket,
-      live_cells: new_live_cells,
-      generation: socket.assigns.generation + 1
-    )
   end
 
   defp initial_pattern(pattern, grid_size) do
@@ -225,6 +233,29 @@ defmodule GameOfLifeWeb.GameLive do
     end)
   end
 
+  defp cell_id({x, y}), do: "cell-#{x}-#{y}"
+
+  defp bump_generation(socket) do
+    assign(socket, generation: socket.assigns.generation + 1)
+  end
+
+  # LiveStream helpers --------------------------------------------------
+  defp put_live_cells(socket, live_cells) do
+    socket
+    |> assign(live_cells: live_cells)
+    |> stream_reset_cells(live_cells)
+  end
+
+  defp stream_reset_cells(socket, live_cells) do
+    stream(socket, :cells, MapSet.to_list(live_cells), reset: true, dom_id: &cell_id/1)
+  end
+
+  defp stream_apply_diff(socket, add_set, remove_set) do
+    socket = Enum.reduce(add_set, socket, fn cell, s -> stream_insert(s, :cells, cell, at: 0) end)
+    Enum.reduce(remove_set, socket, fn cell, s -> stream_delete(s, :cells, cell) end)
+  end
+
+  # ---------------------------------------------------------------------
   def cell_class(cell, live_cells) do
     if cell in live_cells do
       "bg-black"
