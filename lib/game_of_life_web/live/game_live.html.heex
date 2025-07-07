@@ -100,20 +100,19 @@
           </div>
         </div>
       </div>
-      <div class="flex flex-col gap-4">
-        <.link
-          :for={pattern <- @preview_patterns}
-          patch={"#{pattern.id}"}
-          class="card shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-auto max-h-[240px]"
-        >
-          <div class="card-body p-4">
-            <h3 class="card-title text-lg">{pattern.name}</h3>
-            <p class="text-sm">{pattern.description}</p>
-            <div class="mt-2 flex justify-center">
+      <div
+        :for={pattern <- @preview_patterns}
+        class="flex flex-col gap-4 card shadow-md hover:shadow-lg transition-shadow overflow-auto max-h-[240px]"
+      >
+        <div class="card-body p-4">
+          <h3 class="card-title text-lg">{pattern.name}</h3>
+          <p class="text-sm">{pattern.description}</p>
+          <div class="mt-2 flex justify-center">
+            <.link patch={"#{pattern.id}"} class="cursor-pointer">
               <.pattern_preview pattern={pattern} padding={1} size={80} />
-            </div>
+            </.link>
           </div>
-        </.link>
+        </div>
       </div>
     </div>
   </div>
