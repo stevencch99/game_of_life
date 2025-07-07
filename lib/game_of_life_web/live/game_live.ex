@@ -23,7 +23,10 @@ defmodule GameOfLifeWeb.GameLive do
       grid_style: grid_style_value(@grid_size),
       timer: nil,
       live_cells: MapSet.new(),
-      preview_patterns: GameOfLife.Patterns.get_preview_patterns()
+      preview_patterns: GameOfLife.Patterns.get_preview_patterns(),
+      show_rle_input: false,
+      rle_input: "",
+      rle_preview_cells: nil
     )
   end
 
@@ -67,6 +70,7 @@ defmodule GameOfLifeWeb.GameLive do
 
     new_socket =
       if is_running do
+        # TODO: refactor this reset timer logic by extract into a private function
         # Stop the game and cancel the timer
         if timer, do: Process.cancel_timer(timer)
         assign(socket, is_running: false, timer: nil)
@@ -116,6 +120,47 @@ defmodule GameOfLifeWeb.GameLive do
     end
   end
 
+  def handle_event("toggle_rle_input", _, socket) do
+    {:noreply, assign(socket, :show_rle_input, !socket.assigns.show_rle_input)}
+  end
+
+  def handle_event("preview_rle", %{"value" => rle}, socket) do
+    preview_cells =
+      if String.trim(rle) != "" do
+        GameOfLife.Patterns.rle_to_cells(rle)
+      else
+        nil
+      end
+
+    {:noreply, assign(socket, rle_input: rle, rle_preview_cells: preview_cells)}
+  end
+
+  def handle_event("import_rle", _, %{assigns: %{rle_input: rle}} = socket) do
+    if String.trim(rle) != "" do
+      cells =
+        rle
+        |> GameOfLife.Patterns.rle_to_cells()
+        |> GameOfLife.PatternUtils.center_pattern(socket.assigns.grid_size)
+
+      # update game state
+      socket =
+        assign(socket,
+          live_cells: cells,
+          generation: 0,
+          is_running: false
+        )
+
+      # TODO: refactor this reset timer logic by extract into a private function
+      # cancel timer if running
+      if socket.assigns.timer, do: Process.cancel_timer(socket.assigns.timer)
+      socket = assign(socket, timer: nil)
+
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
   defp assign_timer(socket, speed) do
     assign(socket, timer: Process.send_after(self(), :tick, speed))
   end
@@ -145,36 +190,9 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   defp initial_pattern(pattern, grid_size) do
-    # 計算網格中心點
-    center_x = div(grid_size, 2)
-    center_y = div(grid_size, 2)
-
-    # Get pattern by pattern name
-    pattern = GameOfLife.Patterns.get_pattern(pattern, grid_size)
-
-    # Calculate pattern boundaries
-    {min_x, max_x, min_y, max_y} = pattern_boundaries(pattern)
-
-    # Calculate offset to center the pattern
-    offset_x = center_x - div(min_x + max_x, 2)
-    offset_y = center_y - div(min_y + max_y, 2)
-
-    # Offset pattern coordinates
     pattern
-    |> Enum.map(fn {x, y} -> {x + offset_x, y + offset_y} end)
-    |> MapSet.new()
-  end
-
-  # Calculate pattern boundaries (minimum and maximum x, y coordinates)
-  defp pattern_boundaries(pattern) do
-    Enum.reduce(pattern, {999, -999, 999, -999}, fn {x, y}, {min_x, max_x, min_y, max_y} ->
-      {
-        min(min_x, x),
-        max(max_x, x),
-        min(min_y, y),
-        max(max_y, y)
-      }
-    end)
+    |> GameOfLife.Patterns.get_pattern(grid_size)
+    |> GameOfLife.PatternUtils.center_pattern(grid_size)
   end
 
   def cell_class(cell, live_cells) do

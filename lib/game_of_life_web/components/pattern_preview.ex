@@ -28,7 +28,8 @@ defmodule GameOfLifeWeb.Components.PatternPreview do
   end
 
   defp precompute_cell_positions(assigns) do
-    {min_x, max_x, min_y, max_y} = pattern_boundaries(assigns.pattern.cells)
+    {min_x, max_x, min_y, max_y} =
+      GameOfLife.PatternUtils.pattern_boundaries(assigns.pattern.cells)
 
     width = max(1, max_x - min_x + 1)
     height = max(1, max_y - min_y + 1)
@@ -70,17 +71,5 @@ defmodule GameOfLifeWeb.Components.PatternPreview do
       view_box: "0 0 #{view_width} #{view_height}",
       precomputed_cells: precomputed_cells
     )
-  end
-
-  # 計算 pattern 邊界 (最小和最大 x, y 座標)
-  defp pattern_boundaries(cells) do
-    Enum.reduce(cells, {999, -999, 999, -999}, fn {x, y}, {min_x, max_x, min_y, max_y} ->
-      {
-        min(min_x, x),
-        max(max_x, x),
-        min(min_y, y),
-        max(max_y, y)
-      }
-    end)
   end
 end
