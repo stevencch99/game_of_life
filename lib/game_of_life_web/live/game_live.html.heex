@@ -108,7 +108,7 @@
           <h3 class="card-title text-lg">{pattern.name}</h3>
           <p class="text-sm">{pattern.description}</p>
           <div class="mt-2 flex justify-center">
-            <.link patch={"#{pattern.id}"} class="cursor-pointer">
+            <.link patch={"/pattern/#{pattern.id}"} class="cursor-pointer">
               <.pattern_preview pattern={pattern} padding={1} size={80} />
             </.link>
           </div>
