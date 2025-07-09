@@ -23,6 +23,7 @@ defmodule GameOfLifeWeb.GameLive do
       grid_style: grid_style_value(@grid_size),
       timer: nil,
       live_cells: MapSet.new(),
+      pattern: "",
       preview_patterns: GameOfLife.Patterns.get_preview_patterns(),
       show_rle_input: false,
       rle_input: "",
@@ -31,7 +32,10 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   defp assign_pattern(socket, pattern) do
-    assign(socket, live_cells: initial_pattern(pattern, socket.assigns.grid_size))
+    assign(socket,
+      live_cells: initial_pattern(pattern, socket.assigns.grid_size),
+      pattern: pattern
+    )
   end
 
   @impl true

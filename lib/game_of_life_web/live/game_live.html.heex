@@ -35,6 +35,9 @@
         <button phx-click="clear" class="btn btn-outline btn-secondary">
           Clear
         </button>
+        <.link navigate={~p"/pattern/#{@pattern}"} class="btn btn-outline btn-neutral">
+          Reset
+        </.link>
       </div>
 
       <div id="speed-control" class="w-full max-w-md mx-auto mb-4">
