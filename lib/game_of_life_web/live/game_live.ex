@@ -106,17 +106,13 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   def handle_event("set_speed", %{"speed" => speed_str}, socket) do
-    if socket.assigns.is_running do
-      speed = String.to_integer(speed_str)
-      # Reset the timer with the new speed
-      {:noreply,
-       socket
-       |> assign(:speed, speed)
-       |> maybe_reset_timer()
-       |> assign_timer(speed)}
-    else
-      {:noreply, socket}
-    end
+    speed = String.to_integer(speed_str)
+
+    {:noreply,
+     socket
+     |> assign(:speed, speed)
+     |> maybe_reset_timer()
+     |> assign_timer(speed)}
   end
 
   def handle_event("toggle_rle_input", _, socket) do
