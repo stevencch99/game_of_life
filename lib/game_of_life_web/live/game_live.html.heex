@@ -21,7 +21,7 @@
 
       <div class="text-center flex gap-2 justify-center">
         <button phx-click="start_stop" class="btn btn-primary btn-outline">
-          {if @is_running, do: "Pause", else: "Start"}
+          <.icon name={(@is_running && "hero-pause") || "hero-play"} class="w-4 h-4" />
         </button>
         <button
           phx-click="next_step"
@@ -30,13 +30,13 @@
             (@is_running && "btn-disabled") || "btn-outline btn-neutral"
           ]}
         >
-          Next Step
+          <.icon name="hero-forward" class="w-4 h-4" />
         </button>
         <button phx-click="clear" class="btn btn-outline btn-secondary">
-          Clear
+          <.icon name="hero-trash" class="w-4 h-4" />
         </button>
         <.link navigate={~p"/pattern/#{@pattern}"} class="btn btn-outline btn-neutral">
-          Reset
+          <.icon name="hero-arrow-path" class="w-4 h-4" />
         </.link>
       </div>
 
