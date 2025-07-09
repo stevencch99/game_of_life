@@ -62,20 +62,20 @@
       <p class="text-sm text-gray-600 text-center">Click on a cell to toggle its state.</p>
     </div>
 
-    <div
-      id="life-lexicon"
-      class="w-[350px] bg-white rounded-lg p-4 overflow-y-auto max-h-[80vh] shadow-sm"
-    >
+    <div id="life-lexicon" class="w-[350px] rounded-lg p-4 overflow-y-auto max-h-[80vh] shadow-sm">
       <!-- 右側 Life Lexicon 區塊 -->
       <h2 class="text-xl font-bold mb-4 text-center">Life Lexicon</h2>
 
-      <div id="rle-input-panel" class="mb-6 border-b pb-4">
+      <div id="rle-input-panel" class="card shadow-sm border p-4">
         <!-- RLE 輸入區 -->
 
         <div class="flex justify-between items-center mb-2">
           <h3 class="font-medium">RLE 輸入</h3>
-          <button phx-click="toggle_rle_input" class="btn btn-xs btn-ghost">
-            {if @show_rle_input, do: "收起", else: "展開"}
+          <button phx-click="toggle_rle_input" class="btn btn-sm btn-outline btn-neutral">
+            <.icon
+              name={if @show_rle_input, do: "hero-chevron-up", else: "hero-chevron-down"}
+              class="w-4 h-4"
+            />
           </button>
         </div>
 
@@ -98,7 +98,7 @@
                 size={80}
               />
             </div>
-            <button phx-click="import_rle" class="btn btn-sm btn-primary">匯入</button>
+            <button phx-click="import_rle" class="btn btn-sm btn-outline btn-primary">載入</button>
           </div>
         </div>
       </div>
