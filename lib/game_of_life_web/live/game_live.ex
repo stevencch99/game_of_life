@@ -52,14 +52,16 @@ defmodule GameOfLifeWeb.GameLive do
   end
 
   @impl true
-  def handle_event("toggle_cell", %{"x" => x_str, "y" => y_str}, socket) do
-    cell = {String.to_integer(x_str), String.to_integer(y_str)}
+  def handle_event("toggle_cell", %{"cord" => cord}, socket) do
+    %{live_cells: live_cells} = socket.assigns
+
+    cell = String.split(cord, "-") |> Enum.map(&String.to_integer/1) |> List.to_tuple()
 
     new_live_cells =
-      if cell in socket.assigns.live_cells do
-        MapSet.delete(socket.assigns.live_cells, cell)
+      if MapSet.member?(live_cells, cell) do
+        MapSet.delete(live_cells, cell)
       else
-        MapSet.put(socket.assigns.live_cells, cell)
+        MapSet.put(live_cells, cell)
       end
 
     {:noreply, assign(socket, :live_cells, new_live_cells)}
@@ -205,7 +207,7 @@ defmodule GameOfLifeWeb.GameLive do
   Returns "o" for live cells and "b" for dead cells.
   """
   def cell_class(cell, live_cells) do
-    if cell in live_cells, do: "o", else: "b"
+    if MapSet.member?(live_cells, cell), do: "o", else: "b"
   end
 
   defp grid_style_value(grid_size) do

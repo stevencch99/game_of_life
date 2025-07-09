@@ -13,8 +13,7 @@
           <div
             class={["border border-gray-200", cell_class({x, y}, @live_cells)]}
             phx-click="toggle_cell"
-            phx-value-x={x}
-            phx-value-y={y}
+            phx-value-cord={"#{x}-#{y}"}
           >
           </div>
         <% end %>
