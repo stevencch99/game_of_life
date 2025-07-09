@@ -31,20 +31,23 @@ defmodule GameOfLifeWeb.GameLive do
     )
   end
 
-  defp assign_pattern(socket, pattern) do
-    assign(socket,
-      live_cells: initial_pattern(pattern, socket.assigns.grid_size),
-      pattern: pattern
-    )
-  end
-
   @impl true
   def handle_params(params, _url, socket) do
     socket =
       if connected?(socket) do
         # 客戶端已連接：載入完整互動功能
         # 這時候使用者瀏覽器已經準備好處理動態內容，不會影響首次顯示內容所需時間 (FCP)
-        assign_pattern(socket, Map.get(params, "pattern"))
+        pattern = Map.get(params, "pattern", "tower")
+
+        socket
+        |> assign(
+          live_cells: initial_pattern(pattern, socket.assigns.grid_size),
+          pattern: pattern,
+          is_running: false,
+          generation: 0,
+          rle_input: ""
+        )
+        |> maybe_reset_timer()
       else
         # 初始靜態渲染：優化 SEO 和核心網頁指標
         # 搜尋引擎爬蟲一進頁面就可直接抓到所有必要的內容與標籤（如標題、描述、圖片、文章內容等）
