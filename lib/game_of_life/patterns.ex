@@ -472,6 +472,9 @@ o4b$6bo5b$6b2o!")
   end
 
   # 處理帶有重複次數的 RLE
+  # 當前仍在輸入 RLE (例如只輸入了數字但沒有後續字元) 時，rest 可能為空字串。
+  defp parse_rle_with_count("", _count, _x, _y, cells), do: {cells, ""}
+
   defp parse_rle_with_count(<<char::utf8, rest::binary>>, count, x, y, cells) do
     case char do
       ?b ->

@@ -136,14 +136,13 @@ defmodule GameOfLifeWeb.GameLive do
     {:noreply, assign(socket, rle_input: rle, rle_preview_cells: preview_cells)}
   end
 
-  def handle_event("import_rle", _, %{assigns: %{rle_input: rle}} = socket) do
+  def handle_event("apply-rle", _, %{assigns: %{rle_input: rle}} = socket) do
     if String.trim(rle) != "" do
       cells =
         rle
         |> GameOfLife.Patterns.rle_to_cells()
         |> GameOfLife.PatternUtils.center_pattern(socket.assigns.grid_size)
 
-      # update game state
       socket =
         socket
         |> assign(

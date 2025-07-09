@@ -11,19 +11,18 @@ defmodule GameOfLifeWeb.Components.PatternPreview do
     doc: "Maximum viewBox dimension in grid cells (SVG coordinate units)"
 
   def pattern_preview(assigns) do
-    # 預計算所有必要的變數和細胞位置
-    assigns = precompute_cell_positions(assigns)
+    assigns = assign_cell_positions(assigns)
 
     ~H"""
     <svg width={@size} height={@size} viewBox={@view_box} class={["pattern-preview", @class]}>
-      <!-- 背景網格 -->
+      <!-- grid -->
       <rect x="0" y="0" width="100%" height="100%" fill="white" stroke="#eee" stroke-width="0.1" />
       
-    <!-- 繪製活細胞 -->
+    <!-- cells -->
       <rect
-        :for={cell <- @precomputed_cells}
-        x={cell.x}
-        y={cell.y}
+        :for={{x, y} <- @precomputed_cells}
+        x={x}
+        y={y}
         width={@cell_size}
         height={@cell_size}
         fill="black"
@@ -32,22 +31,25 @@ defmodule GameOfLifeWeb.Components.PatternPreview do
     """
   end
 
-  defp precompute_cell_positions(assigns) do
+  # 計算所有必要的變數和細胞位置
+  defp assign_cell_positions(assigns) do
+    %{pattern: pattern, max_view_size: max_view_size, padding: padding} = assigns
+
     {min_x, max_x, min_y, max_y} =
-      GameOfLife.PatternUtils.pattern_boundaries(assigns.pattern.cells)
+      GameOfLife.PatternUtils.pattern_boundaries(pattern.cells)
 
     width = max(1, max_x - min_x + 1)
     height = max(1, max_y - min_y + 1)
 
     # 計算需要的 viewBox 大小（加上 padding）
-    view_width = min(assigns.max_view_size, width + 2 * assigns.padding)
-    view_height = min(assigns.max_view_size, height + 2 * assigns.padding)
+    view_width = min(max_view_size, width + 2 * padding)
+    view_height = min(max_view_size, height + 2 * padding)
 
     # 計算縮放因子，使 pattern 適合預覽區域
     scale =
       min(
-        (view_width - 2 * assigns.padding) / width,
-        (view_height - 2 * assigns.padding) / height
+        (view_width - 2 * padding) / width,
+        (view_height - 2 * padding) / height
       )
 
     # 計算偏移，使 pattern 居中
@@ -59,20 +61,15 @@ defmodule GameOfLifeWeb.Components.PatternPreview do
 
     # 計算所有細胞的顯示座標
     precomputed_cells =
-      Enum.map(assigns.pattern.cells, fn {x, y} ->
+      Enum.map(pattern.cells, fn {x, y} ->
         preview_x = (x - min_x) * scale + offset_x
         preview_y = (y - min_y) * scale + offset_y
-        %{x: preview_x, y: preview_y}
+        {preview_x, preview_y}
       end)
 
     # 將必要的顯示變數放入 assigns
     assign(assigns,
-      min_x: min_x,
-      min_y: min_y,
-      scale: scale,
       cell_size: cell_size,
-      offset_x: offset_x,
-      offset_y: offset_y,
       view_box: "0 0 #{view_width} #{view_height}",
       precomputed_cells: precomputed_cells
     )
