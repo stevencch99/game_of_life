@@ -198,12 +198,14 @@ defmodule GameOfLifeWeb.GameLive do
     |> GameOfLife.PatternUtils.center_pattern(grid_size)
   end
 
+  @doc """
+  Returns the CSS class for a cell based on its state.
+  - `cell`: The cell coordinates as a tuple `{x, y}`.
+  - `live_cells`: A set of live cells.
+  Returns "o" for live cells and "b" for dead cells.
+  """
   def cell_class(cell, live_cells) do
-    if cell in live_cells do
-      "bg-black"
-    else
-      "bg-white hover:bg-gray-100"
-    end
+    if cell in live_cells, do: "o", else: "b"
   end
 
   defp grid_style_value(grid_size) do

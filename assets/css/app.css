@@ -3,3 +3,23 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+
+/* Cell state classes (shortened names)
+   .b = dead (blank) cell
+   .o = live (occupied) cell
+   We replicate the Tailwind colours used previously:
+   - Dead cell background white (same as bg-white)
+   - Dead cell hover colour gray-100 (#f3f4f6)
+   - Live cell background black (same as bg-black)
+*/
+.b {
+  background-color: #ffffff; /* white */
+}
+
+.b:hover {
+  background-color: #f3f4f6; /* tailwind gray-100 */
+}
+
+.o {
+  background-color: #000000; /* black */
+}
