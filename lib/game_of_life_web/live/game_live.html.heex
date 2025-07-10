@@ -49,9 +49,9 @@
             type="range"
             id="speed"
             name="speed"
-            min="100"
+            min="50"
             max="1000"
-            step="100"
+            step="50"
             value={@speed}
             class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
           />
@@ -104,7 +104,7 @@
       </div>
       <div
         :for={pattern <- @preview_patterns}
-        class="flex flex-col gap-4 card shadow-md hover:shadow-lg transition-shadow overflow-auto max-h-[240px]"
+        class="flex flex-col gap-4 card shadow-md hover:shadow-lg transition-shadow overflow-auto h-[240px]"
       >
         <div class="card-body p-4">
           <h3 class="card-title text-lg">{pattern.name}</h3>

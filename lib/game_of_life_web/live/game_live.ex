@@ -5,7 +5,10 @@ defmodule GameOfLifeWeb.GameLive do
   import GameOfLifeWeb.Components.PatternPreview, only: [pattern_preview: 1]
 
   # Default grid size
-  @grid_size 100
+  # TODO: might be configurable in the future
+  @grid_size 64
+  # @grid_size 100
+
   # Default speed in ms
   @default_speed 200
 
